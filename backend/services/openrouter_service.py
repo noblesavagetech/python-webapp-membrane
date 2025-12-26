@@ -74,14 +74,15 @@ class OpenRouterService:
     ) -> str:
         """Get a ghost-writing suggestion"""
         
+        # Get context before cursor (last 500 chars for efficiency)
         context = text[:cursor_position]
-        last_sentence = context.split(".")[-1].strip() if "." in context else context
+        relevant_context = context[-500:] if len(context) > 500 else context
         
         purpose_prompts = {
-            "writing": "You are assisting with creative and analytical writing.",
-            "accounting": "You are assisting with financial and accounting documentation.",
-            "research": "You are assisting with academic and research writing.",
-            "general": "You are assisting with general writing and note-taking."
+            "writing": "You are a writing assistant. Complete the user's text naturally.",
+            "accounting": "You are helping with financial documentation. Complete the text.",
+            "research": "You are helping with research writing. Complete the text.",
+            "general": "You are a writing assistant. Complete the user's text."
         }
         
         system_prompt = purpose_prompts.get(purpose, purpose_prompts["general"])
@@ -98,16 +99,16 @@ class OpenRouterService:
             "messages": [
                 {
                     "role": "system",
-                    "content": f"{system_prompt} Provide a brief, natural continuation of the text (1-2 sentences max). Match the writing style and tone."
+                    "content": f"{system_prompt} Only return the continuation text itself (1-2 sentences), nothing else. Do not explain or apologize."
                 },
                 {
                     "role": "user",
-                    "content": f"Continue this text naturally:\n\n{last_sentence}"
+                    "content": relevant_context
                 }
             ],
             "stream": False,
-            "temperature": 0.8,
-            "max_tokens": 100
+            "temperature": 0.7,
+            "max_tokens": 50
         }
         
         async with httpx.AsyncClient(timeout=30.0) as client:
