@@ -78,14 +78,18 @@ class OpenRouterService:
         context = text[:cursor_position]
         relevant_context = context[-500:] if len(context) > 500 else context
         
+        # Don't suggest if context is too short
+        if len(relevant_context.strip()) < 10:
+            return ""
+        
         purpose_prompts = {
-            "writing": "You are a writing assistant. Complete the user's text naturally.",
-            "accounting": "You are helping with financial documentation. Complete the text.",
-            "research": "You are helping with research writing. Complete the text.",
-            "general": "You are a writing assistant. Complete the user's text."
+            "writing": "creative and analytical writing",
+            "accounting": "financial and accounting documentation",
+            "research": "academic and research writing",
+            "general": "general writing"
         }
         
-        system_prompt = purpose_prompts.get(purpose, purpose_prompts["general"])
+        purpose_desc = purpose_prompts.get(purpose, purpose_prompts["general"])
         
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -99,16 +103,16 @@ class OpenRouterService:
             "messages": [
                 {
                     "role": "system",
-                    "content": f"{system_prompt} Only return the continuation text itself (1-2 sentences), nothing else. Do not explain or apologize."
+                    "content": f"You are an AI writing assistant for {purpose_desc}. Your job is to predict what the user will write next. Respond ONLY with the predicted continuation text (10-30 words). Match the user's writing style and tone exactly. Do NOT include explanations, apologies, or meta-commentary."
                 },
                 {
                     "role": "user",
-                    "content": relevant_context
+                    "content": f"Text written so far:\n\n{relevant_context}\n\n---\nPredict the next 10-30 words:"
                 }
             ],
             "stream": False,
             "temperature": 0.7,
-            "max_tokens": 50
+            "max_tokens": 60
         }
         
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -121,5 +125,11 @@ class OpenRouterService:
             data = response.json()
             
             if "choices" in data and len(data["choices"]) > 0:
-                return data["choices"][0]["message"]["content"].strip()
+                suggestion = data["choices"][0]["message"]["content"].strip()
+                # Remove any quotes or meta-text
+                suggestion = suggestion.strip('"\'')
+                # If it starts with apologizing or explaining, reject it
+                if any(suggestion.lower().startswith(x) for x in ['i cannot', 'i apologize', 'without', 'i need', 'please provide']):
+                    return ""
+                return " " + suggestion  # Add leading space
             return ""
