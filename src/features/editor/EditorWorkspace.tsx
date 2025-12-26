@@ -35,6 +35,7 @@ function EditorWorkspace() {
   const [selectedRange, setSelectedRange] = useState<{ start: number; end: number } | null>(null);
   const [purpose, setPurpose] = useState<Purpose>('writing');
   const [partner, setPartner] = useState<Partner>('balanced');
+  const [selectedModel, setSelectedModel] = useState('anthropic/claude-3.7-sonnet');
   const [showChat, setShowChat] = useState(true);
   const [showContext, setShowContext] = useState(false);
   const [memories, setMemories] = useState<string[]>([]);
@@ -223,6 +224,7 @@ function EditorWorkspace() {
             onSelection={handleSelection}
             purpose={purpose}
             partner={partner}
+            selectedModel={selectedModel}
           />
         </div>
         
@@ -235,6 +237,8 @@ function EditorWorkspace() {
               partner={partner}
               documentContent={document.content}
               memories={memories}
+              selectedModel={selectedModel}
+              onModelChange={setSelectedModel}
               onInsertText={handleInsertText}
               onApplySuggestion={handleApplySuggestion}
               onAddMemory={addMemory}

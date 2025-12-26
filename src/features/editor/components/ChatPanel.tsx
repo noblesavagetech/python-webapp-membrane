@@ -22,6 +22,8 @@ interface ChatPanelProps {
   partner: string;
   documentContent: string;
   memories: string[];
+  selectedModel: string;
+  onModelChange: (model: string) => void;
   onInsertText: (text: string) => void;
   onApplySuggestion: (original: string, suggestion: string) => void;
   onAddMemory: (memory: string) => void;
@@ -39,6 +41,8 @@ function ChatPanel({
   purpose,
   partner,
   documentContent,
+  selectedModel,
+  onModelChange,
   onApplySuggestion,
   onAddMemory,
 }: ChatPanelProps) {
@@ -47,7 +51,6 @@ function ChatPanel({
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [models, setModels] = useState<Model[]>([]);
-  const [selectedModel, setSelectedModel] = useState('anthropic/claude-3.7-sonnet');
   const [showModelSelector, setShowModelSelector] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -181,7 +184,7 @@ function ChatPanel({
               key={model.id}
               className={`model-option ${selectedModel === model.id ? 'active' : ''}`}
               onClick={() => {
-                setSelectedModel(model.id);
+                onModelChange(model.id);
                 setShowModelSelector(false);
               }}
             >

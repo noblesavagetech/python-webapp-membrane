@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { apiService } from '../../../services/api';
 import './DocumentEditor.css';
 
 interface DocumentEditorProps {
@@ -7,6 +8,7 @@ interface DocumentEditorProps {
   onSelection: (text: string, range: { start: number; end: number } | null) => void;
   purpose: string;
   partner: string;
+  selectedModel: string;
 }
 
 interface GhostSuggestion {
@@ -14,7 +16,7 @@ interface GhostSuggestion {
   position: number;
 }
 
-function DocumentEditor({ content, onChange, onSelection, purpose, partner: _partner }: DocumentEditorProps) {
+function DocumentEditor({ content, onChange, onSelection, purpose, selectedModel, partner: _partner }: DocumentEditorProps) {
   const [localContent, setLocalContent] = useState(content);
   const [ghostSuggestion, setGhostSuggestion] = useState<GhostSuggestion | null>(null);
   const [isComposing, setIsComposing] = useState(false);
@@ -25,48 +27,27 @@ function DocumentEditor({ content, onChange, onSelection, purpose, partner: _par
     setLocalContent(content);
   }, [content]);
 
-  const generateGhostSuggestion = useCallback((text: string, cursorPosition: number) => {
-    // Simulated ghost-writing suggestions based on context
-    const lastSentence = text.slice(0, cursorPosition).split(/[.!?]\s*/).pop() || '';
-    const words = lastSentence.trim().split(/\s+/);
-    
-    if (words.length < 3) return null;
-    
-    const suggestions: Record<string, string[]> = {
-      writing: [
-        ' and this leads to an interesting observation.',
-        ' which suggests a deeper pattern.',
-        ' revealing the underlying structure.',
-        ', expanding on this concept further.',
-      ],
-      accounting: [
-        ' resulting in a net adjustment of',
-        ' which affects the quarterly projection.',
-        ' per the standard reconciliation process.',
-        ', subject to audit verification.',
-      ],
-      research: [
-        ' as demonstrated in the literature.',
-        ' warranting further investigation.',
-        ' consistent with our hypothesis.',
-        ', requiring additional data points.',
-      ],
-      general: [
-        ' and furthermore,',
-        ' in addition to this,',
-        ' considering the context,',
-        ' moving forward,',
-      ],
-    };
-    
-    const purposeSuggestions = suggestions[purpose] || suggestions.general;
-    const randomSuggestion = purposeSuggestions[Math.floor(Math.random() * purposeSuggestions.length)];
-    
-    return {
-      text: randomSuggestion,
-      position: cursorPosition,
-    };
-  }, [purpose]);
+  const generateGhostSuggestion = useCallback(async (text: string, cursorPosition: number) => {
+    // Call real API for ghost suggestions
+    try {
+      const suggestion = await apiService.getGhostSuggestion({
+        text,
+        cursorPosition,
+        purpose,
+        model: selectedModel,
+      });
+      
+      if (suggestion && suggestion.trim()) {
+        return {
+          text: suggestion,
+          position: cursorPosition,
+        };
+      }
+    } catch (error) {
+      console.error('Ghost suggestion error:', error);
+    }
+    return null;
+  }, [purpose, selectedModel]);
 
   const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
@@ -82,13 +63,13 @@ function DocumentEditor({ content, onChange, onSelection, purpose, partner: _par
     
     // Generate new ghost suggestion after debounce
     if (!isComposing) {
-      ghostTimeoutRef.current = window.setTimeout(() => {
+      ghostTimeoutRef.current = window.setTimeout(async () => {
         const cursorPos = e.target.selectionStart;
-        const suggestion = generateGhostSuggestion(newContent, cursorPos);
+        const suggestion = await generateGhostSuggestion(newContent, cursorPos);
         if (suggestion && cursorPos === newContent.length) {
           setGhostSuggestion(suggestion);
         }
-      }, 500);
+      }, 1500); // Increased debounce for API call
     }
   }, [onChange, generateGhostSuggestion, isComposing]);
 

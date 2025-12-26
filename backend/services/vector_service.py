@@ -1,12 +1,13 @@
 import chromadb
 from chromadb.config import Settings
-from sentence_transformers import SentenceTransformer
+import httpx
 from typing import List, Dict, Optional
 import os
 
 class VectorService:
-    def __init__(self, db_dir: str = "./data/vectordb"):
+    def __init__(self, db_dir: str = "./data/vectordb", openrouter_api_key: str = ""):
         self.db_dir = db_dir
+        self.api_key = openrouter_api_key
         os.makedirs(db_dir, exist_ok=True)
         
         # Initialize ChromaDB
@@ -15,15 +16,36 @@ class VectorService:
             settings=Settings(anonymized_telemetry=False)
         )
         
-        # Initialize embedding model
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+    async def _get_embedding(self, text: str) -> List[float]:
+        """Get embedding from OpenRouter API"""
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://membrane.app",
+            "X-Title": "The Membrane"
+        }
         
+        payload = {
+            "model": "openai/text-embedding-3-small",
+            "input": text
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                "https://openrouter.ai/api/v1/embeddings",
+                headers=headers,
+                json=payload
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["data"][0]["embedding"]
+    
     def _get_collection(self, project_id: str):
         """Get or create collection for a project"""
         collection_name = f"project_{project_id.replace('-', '_')}"
         return self.client.get_or_create_collection(name=collection_name)
     
-    def add_memory(
+    async def add_memory(
         self,
         project_id: str,
         content: str,
@@ -32,8 +54,8 @@ class VectorService:
         """Add content to vector memory"""
         collection = self._get_collection(project_id)
         
-        # Generate embedding
-        embedding = self.model.encode(content).tolist()
+        # Generate embedding via OpenRouter
+        embedding = await self._get_embedding(content)
         
         # Add to collection
         collection.add(
@@ -43,7 +65,7 @@ class VectorService:
             ids=[f"{project_id}_{collection.count()}"]
         )
     
-    def search(
+    async def search(
         self,
         project_id: str,
         query: str,
@@ -56,8 +78,8 @@ class VectorService:
             if collection.count() == 0:
                 return []
             
-            # Generate query embedding
-            query_embedding = self.model.encode(query).tolist()
+            # Generate query embedding via OpenRouter
+            query_embedding = await self._get_embedding(query)
             
             # Search
             results = collection.query(

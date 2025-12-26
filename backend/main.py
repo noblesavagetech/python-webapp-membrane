@@ -25,8 +25,12 @@ app.add_middleware(
 )
 
 # Initialize services
-openrouter = OpenRouterService(api_key=os.getenv("OPENROUTER_API_KEY"))
-vector_service = VectorService(db_dir=os.getenv("VECTOR_DB_DIR", "./data/vectordb"))
+openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+openrouter = OpenRouterService(api_key=openrouter_api_key)
+vector_service = VectorService(
+    db_dir=os.getenv("VECTOR_DB_DIR", "./data/vectordb"),
+    openrouter_api_key=openrouter_api_key
+)
 file_service = FileService(upload_dir=os.getenv("UPLOAD_DIR", "./data/uploads"))
 
 # Models
@@ -65,7 +69,7 @@ async def chat_stream(request: ChatRequest):
     """Stream AI responses in real-time"""
     
     # Get relevant memories from vector store
-    memories = vector_service.search(request.project_id, request.message, top_k=3)
+    memories = await vector_service.search(request.project_id, request.message, top_k=3)
     
     # Build context
     context = f"""Purpose: {request.purpose}
@@ -108,13 +112,13 @@ async def ghost_suggest(request: GhostSuggestionRequest):
 @app.post("/api/memory/add")
 async def add_memory(request: MemoryRequest):
     """Add content to vector memory"""
-    vector_service.add_memory(request.project_id, request.content)
+    await vector_service.add_memory(request.project_id, request.content)
     return {"status": "success", "message": "Memory added"}
 
 @app.post("/api/memory/search")
 async def search_memory(request: SearchMemoryRequest):
     """Search vector memory"""
-    results = vector_service.search(request.project_id, request.query, request.top_k)
+    results = await vector_service.search(request.project_id, request.query, request.top_k)
     return {"results": results}
 
 # File upload endpoints
@@ -128,7 +132,7 @@ async def upload_file(
     
     # Process and add to vector store
     content = await file_service.extract_text(file_path)
-    vector_service.add_memory(project_id, content, metadata={"source": file.filename})
+    await vector_service.add_memory(project_id, content, metadata={"source": file.filename})
     
     return {
         "status": "success",

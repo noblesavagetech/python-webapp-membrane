@@ -47,26 +47,38 @@ class APIService {
     const url = `${API_BASE_URL}${endpoint}`;
     console.log('[Membrane] Fetching:', url);
     
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      credentials: 'omit', // Don't send credentials for Codespaces cross-origin requests
-    });
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        credentials: 'omit', // Don't send credentials for Codespaces cross-origin requests
+      });
 
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.statusText}`);
+      if (!response.ok) {
+        console.error('[Membrane] HTTP Error:', response.status, response.statusText);
+        throw new Error(`API Error: ${response.statusText}`);
+      }
+
+      return response;
+    } catch (error) {
+      console.error('[Membrane] Fetch failed:', error);
+      throw error;
     }
-
-    return response;
   }
 
   async getModels(): Promise<Model[]> {
-    const response = await this.fetchAPI('/api/models');
-    const data = await response.json();
-    return data.models;
+    try {
+      const response = await this.fetchAPI('/api/models');
+      const data = await response.json();
+      console.log('[Membrane] Models loaded:', data.models?.length || 0);
+      return data.models;
+    } catch (error) {
+      console.error('[Membrane] Failed to load models from', API_BASE_URL, error);
+      throw error;
+    }
   }
 
   async *streamChat(params: {
