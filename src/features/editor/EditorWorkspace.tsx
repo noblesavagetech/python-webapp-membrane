@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { persistence } from '../../utils/persistence';
+import { apiService, Project as APIProject } from '../../services/api';
 import DocumentEditor from './components/DocumentEditor';
 import ChatPanel from './components/ChatPanel';
 import ContextPanel from './components/ContextPanel';
@@ -12,15 +12,6 @@ interface DocumentState {
   updatedAt: string;
 }
 
-interface Project {
-  id: string;
-  name: string;
-  type: 'writing' | 'accounting' | 'research' | 'general';
-  updatedAt: string;
-  wordCount: number;
-  memoryCount: number;
-}
-
 type Purpose = 'writing' | 'accounting' | 'research' | 'general';
 type Partner = 'critical' | 'balanced' | 'expansive';
 
@@ -29,7 +20,7 @@ function EditorWorkspace() {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const [project, setProject] = useState<Project | null>(null);
+  const [project, setProject] = useState<APIProject | null>(null);
   const [document, setDocument] = useState<DocumentState>({ content: '', updatedAt: '' });
   const [selectedText, setSelectedText] = useState('');
   const [selectedRange, setSelectedRange] = useState<{ start: number; end: number } | null>(null);
@@ -39,64 +30,55 @@ function EditorWorkspace() {
   const [showChat, setShowChat] = useState(true);
   const [showContext, setShowContext] = useState(false);
   const [memories, setMemories] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const saveTimeoutRef = useRef<number | null>(null);
+  const projectIdNum = projectId ? parseInt(projectId, 10) : null;
 
   useEffect(() => {
     const loadProject = async () => {
-      if (!user || !projectId) return;
-      
-      const stored = await persistence.getItem(`membrane_projects_${user.id}`);
-      if (stored) {
-        const projects: Project[] = JSON.parse(stored);
-        const found = projects.find(p => p.id === projectId);
-        if (found) {
-          setProject(found);
-          setPurpose(found.type);
-        } else {
-          navigate('/dashboard');
-        }
+      if (!user || !projectIdNum) {
+        navigate('/dashboard');
+        return;
       }
       
-      const docStored = await persistence.getItem(`membrane_doc_${projectId}`);
-      if (docStored) {
-        setDocument(JSON.parse(docStored));
-      }
-      
-      const memoriesStored = await persistence.getItem(`membrane_memories_${projectId}`);
-      if (memoriesStored) {
-        setMemories(JSON.parse(memoriesStored));
+      try {
+        const projectData = await apiService.getProject(projectIdNum);
+        setProject(projectData);
+        
+        const docData = await apiService.getDocument(projectIdNum);
+        setDocument({
+          content: docData.content,
+          updatedAt: docData.updated_at,
+        });
+      } catch (error) {
+        console.error('Failed to load project:', error);
+        navigate('/dashboard');
+      } finally {
+        setLoading(false);
       }
     };
     
     loadProject();
-  }, [user, projectId, navigate]);
+  }, [user, projectIdNum, navigate]);
 
   const saveDocument = useCallback(async (content: string) => {
-    if (!projectId || !user) return;
+    if (!projectIdNum || !user) return;
     
     const updated: DocumentState = {
       content,
       updatedAt: new Date().toISOString(),
     };
     
-    await persistence.setItem(`membrane_doc_${projectId}`, JSON.stringify(updated));
-    
-    // Update project metadata
-    const stored = await persistence.getItem(`membrane_projects_${user.id}`);
-    if (stored) {
-      const projects: Project[] = JSON.parse(stored);
-      const idx = projects.findIndex(p => p.id === projectId);
-      if (idx >= 0) {
-        projects[idx].updatedAt = updated.updatedAt;
-        projects[idx].wordCount = content.split(/\s+/).filter(Boolean).length;
-        await persistence.setItem(`membrane_projects_${user.id}`, JSON.stringify(projects));
-        setProject(projects[idx]);
-      }
-    }
-    
     setDocument(updated);
-  }, [projectId, user]);
+    
+    // Save to backend with debounce handled by handleContentChange
+    try {
+      await apiService.updateDocument(projectIdNum, content);
+    } catch (error) {
+      console.error('Failed to save document:', error);
+    }
+  }, [projectIdNum, user]);
 
   const handleContentChange = useCallback((content: string) => {
     if (saveTimeoutRef.current) {
@@ -124,28 +106,23 @@ function EditorWorkspace() {
   }, []);
 
   const addMemory = useCallback(async (memory: string) => {
-    if (!projectId) return;
+    if (!projectIdNum) return;
     
-    const updated = [...memories, memory];
-    setMemories(updated);
-    await persistence.setItem(`membrane_memories_${projectId}`, JSON.stringify(updated));
-    
-    // Update memory count in project
-    if (user) {
-      const stored = await persistence.getItem(`membrane_projects_${user.id}`);
-      if (stored) {
-        const projects: Project[] = JSON.parse(stored);
-        const idx = projects.findIndex(p => p.id === projectId);
-        if (idx >= 0) {
-          projects[idx].memoryCount = updated.length;
-          await persistence.setItem(`membrane_projects_${user.id}`, JSON.stringify(projects));
-        }
-      }
+    try {
+      await apiService.addMemory(projectIdNum, memory);
+      const updated = [...memories, memory];
+      setMemories(updated);
+    } catch (error) {
+      console.error('Failed to add memory:', error);
     }
-  }, [memories, projectId, user]);
+  }, [memories, projectIdNum]);
+
+  if (loading) {
+    return <div className="loading-screen">Loading workspace...</div>;
+  }
 
   if (!project) {
-    return <div className="loading-screen">Loading workspace...</div>;
+    return <div className="loading-screen">Project not found...</div>;
   }
 
   return (
@@ -225,6 +202,7 @@ function EditorWorkspace() {
             purpose={purpose}
             partner={partner}
             selectedModel={selectedModel}
+            projectId={projectIdNum}
           />
         </div>
         
@@ -242,6 +220,7 @@ function EditorWorkspace() {
               onInsertText={handleInsertText}
               onApplySuggestion={handleApplySuggestion}
               onAddMemory={addMemory}
+              projectId={projectIdNum}
             />
           </div>
         )}
@@ -250,12 +229,10 @@ function EditorWorkspace() {
           <div className="context-panel">
             <ContextPanel
               memories={memories}
-              onRemoveMemory={(idx) => {
+              onRemoveMemory={async (idx) => {
                 const updated = memories.filter((_, i) => i !== idx);
                 setMemories(updated);
-                if (projectId) {
-                  persistence.setItem(`membrane_memories_${projectId}`, JSON.stringify(updated));
-                }
+                // TODO: Implement remove memory endpoint
               }}
             />
           </div>
@@ -264,7 +241,7 @@ function EditorWorkspace() {
 
       <footer className="workspace-footer">
         <div className="footer-stats">
-          <span>{project.wordCount.toLocaleString()} words</span>
+          <span>{document.content.split(/\s+/).filter(Boolean).length} words</span>
           <span className="stat-divider">•</span>
           <span>{memories.length} memories</span>
           <span className="stat-divider">•</span>

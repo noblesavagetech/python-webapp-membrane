@@ -1,73 +1,65 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { persistence } from '../../utils/persistence';
+import { apiService, Project as APIProject } from '../../services/api';
 import './Dashboard.css';
 
-interface Project {
-  id: string;
-  name: string;
-  type: 'writing' | 'accounting' | 'research' | 'general';
-  updatedAt: string;
-  wordCount: number;
-  memoryCount: number;
+interface Project extends APIProject {
+  wordCount?: number;
+  memoryCount?: number;
 }
-
-const PROJECT_TYPES = {
-  writing: { icon: '📝', label: 'Writing' },
-  accounting: { icon: '📊', label: 'Accounting' },
-  research: { icon: '🔬', label: 'Research' },
-  general: { icon: '📁', label: 'General' },
-};
 
 function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectType, setNewProjectType] = useState<Project['type']>('writing');
+  const [newProjectDescription, setNewProjectDescription] = useState('');
 
   useEffect(() => {
     const loadProjects = async () => {
-      if (!user) return;
-      const stored = await persistence.getItem(`membrane_projects_${user.id}`);
-      if (stored) {
-        setProjects(JSON.parse(stored));
+      try {
+        const projectList = await apiService.listProjects();
+        setProjects(projectList);
+      } catch (error) {
+        console.error('Failed to load projects:', error);
+      } finally {
+        setLoading(false);
       }
     };
-    loadProjects();
+    
+    if (user) {
+      loadProjects();
+    }
   }, [user]);
-
-  const saveProjects = async (updated: Project[]) => {
-    if (!user) return;
-    await persistence.setItem(`membrane_projects_${user.id}`, JSON.stringify(updated));
-    setProjects(updated);
-  };
 
   const createProject = async () => {
     if (!newProjectName.trim()) return;
     
-    const newProject: Project = {
-      id: crypto.randomUUID(),
-      name: newProjectName,
-      type: newProjectType,
-      updatedAt: new Date().toISOString(),
-      wordCount: 0,
-      memoryCount: 0,
-    };
-    
-    await saveProjects([newProject, ...projects]);
-    setNewProjectName('');
-    setNewProjectType('writing');
-    setShowNewProject(false);
-    navigate(`/workspace/${newProject.id}`);
+    try {
+      const newProject = await apiService.createProject(newProjectName, newProjectDescription);
+      setProjects([newProject, ...projects]);
+      setNewProjectName('');
+      setNewProjectDescription('');
+      setShowNewProject(false);
+      navigate(`/workspace/${newProject.id}`);
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      alert('Failed to create project');
+    }
   };
 
-  const deleteProject = async (id: string) => {
+  const deleteProject = async (id: number) => {
     if (confirm('Delete this project? This cannot be undone.')) {
-      await saveProjects(projects.filter(p => p.id !== id));
-      await persistence.removeItem(`membrane_doc_${id}`);
+      try {
+        await apiService.deleteProject(id);
+        setProjects(projects.filter(p => p.id !== id));
+      } catch (error) {
+        console.error('Failed to delete project:', error);
+        alert('Failed to delete project');
+      }
     }
   };
 
@@ -83,6 +75,14 @@ function Dashboard() {
     return date.toLocaleDateString();
   };
 
+  if (loading) {
+    return (
+      <div className="dashboard">
+        <div className="loading">Loading your projects...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard">
       <header className="dashboard-header">
@@ -91,7 +91,7 @@ function Dashboard() {
           <h1>Your Membrane</h1>
         </div>
         <div className="header-right">
-          <span className="user-name">{user?.name}</span>
+          <span className="user-name">{user?.name || user?.email}</span>
           <button className="logout-btn" onClick={logout}>
             Logout
           </button>
@@ -103,14 +103,14 @@ function Dashboard() {
           <h2>Current Focus</h2>
           {projects.length > 0 ? (
             <Link to={`/workspace/${projects[0].id}`} className="focus-card">
-              <div className="focus-icon">{PROJECT_TYPES[projects[0].type].icon}</div>
+              <div className="focus-icon">📝</div>
               <div className="focus-info">
                 <h3>{projects[0].name}</h3>
-                <p>Last edited {formatDate(projects[0].updatedAt)}</p>
+                <p>Last edited {formatDate(projects[0].updated_at)}</p>
               </div>
               <div className="focus-stats">
-                <span>{projects[0].wordCount.toLocaleString()} words</span>
-                <span>{projects[0].memoryCount} memories</span>
+                <span>{projects[0].wordCount || 0} words</span>
+                <span>{projects[0].memoryCount || 0} memories</span>
               </div>
               <span className="focus-arrow">→</span>
             </Link>
@@ -141,17 +141,12 @@ function Dashboard() {
                 onChange={(e) => setNewProjectName(e.target.value)}
                 autoFocus
               />
-              <div className="type-selector">
-                {Object.entries(PROJECT_TYPES).map(([type, { icon, label }]) => (
-                  <button
-                    key={type}
-                    className={`type-btn ${newProjectType === type ? 'active' : ''}`}
-                    onClick={() => setNewProjectType(type as Project['type'])}
-                  >
-                    {icon} {label}
-                  </button>
-                ))}
-              </div>
+              <input
+                type="text"
+                placeholder="Description (optional)..."
+                value={newProjectDescription}
+                onChange={(e) => setNewProjectDescription(e.target.value)}
+              />
               <div className="form-actions">
                 <button className="cancel-btn" onClick={() => setShowNewProject(false)}>
                   Cancel
@@ -167,13 +162,13 @@ function Dashboard() {
             {projects.map(project => (
               <div key={project.id} className="project-card">
                 <Link to={`/workspace/${project.id}`} className="project-link">
-                  <div className="project-icon">{PROJECT_TYPES[project.type].icon}</div>
+                  <div className="project-icon">📝</div>
                   <div className="project-info">
                     <h3>{project.name}</h3>
-                    <p>{formatDate(project.updatedAt)}</p>
+                    <p>{project.description || formatDate(project.updated_at)}</p>
                   </div>
                   <div className="project-meta">
-                    <span>{project.wordCount.toLocaleString()} words</span>
+                    <span>{project.wordCount || 0} words</span>
                   </div>
                 </Link>
                 <button 

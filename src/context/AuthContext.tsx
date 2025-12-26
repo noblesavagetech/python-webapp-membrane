@@ -1,11 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { persistence } from '../utils/persistence';
+import { apiService, User as APIUser } from '../services/api';
 
 interface User {
-  id: string;
+  id: number;
   email: string;
-  name: string;
-  createdAt: string;
+  name?: string;
 }
 
 interface AuthContextType {
@@ -13,7 +12,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => Promise<void>;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -25,12 +24,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const storedUser = await persistence.getItem('membrane_user');
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
+        // Check if we have a stored token
+        if (apiService.isAuthenticated()) {
+          // Verify token is still valid
+          const currentUser = await apiService.getCurrentUser();
+          setUser(currentUser);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
+        // Token expired or invalid, clear it
+        apiService.logout();
       } finally {
         setLoading(false);
       }
@@ -38,33 +41,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
   }, []);
 
-  const login = useCallback(async (email: string, _password: string) => {
-    // Simulated authentication - in production, this would call Supabase Auth
-    const mockUser: User = {
-      id: crypto.randomUUID(),
-      email,
-      name: email.split('@')[0],
-      createdAt: new Date().toISOString(),
-    };
-    
-    await persistence.setItem('membrane_user', JSON.stringify(mockUser));
-    setUser(mockUser);
+  const login = useCallback(async (email: string, password: string) => {
+    const response = await apiService.login(email, password);
+    setUser(response.user);
   }, []);
 
-  const signup = useCallback(async (email: string, _password: string, name: string) => {
-    const newUser: User = {
-      id: crypto.randomUUID(),
-      email,
-      name,
-      createdAt: new Date().toISOString(),
-    };
-    
-    await persistence.setItem('membrane_user', JSON.stringify(newUser));
-    setUser(newUser);
+  const signup = useCallback(async (email: string, password: string, name: string) => {
+    const response = await apiService.signup(email, password, name);
+    setUser(response.user);
   }, []);
 
-  const logout = useCallback(async () => {
-    await persistence.removeItem('membrane_user');
+  const logout = useCallback(() => {
+    apiService.logout();
     setUser(null);
   }, []);
 

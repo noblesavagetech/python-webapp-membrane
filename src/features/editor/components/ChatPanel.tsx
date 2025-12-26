@@ -27,6 +27,7 @@ interface ChatPanelProps {
   onInsertText: (text: string) => void;
   onApplySuggestion: (original: string, suggestion: string) => void;
   onAddMemory: (memory: string) => void;
+  projectId: number | null;
 }
 
 const QUICK_ACTIONS = [
@@ -45,8 +46,8 @@ function ChatPanel({
   onModelChange,
   onApplySuggestion,
   onAddMemory,
+  projectId,
 }: ChatPanelProps) {
-  const { projectId } = useParams<{ projectId: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);

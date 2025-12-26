@@ -42,7 +42,37 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface User {
+  id: number;
+  email: string;
+  name?: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
+export interface Project {
+  id: number;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 class APIService {
+  private getAuthHeaders(): HeadersInit {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      return {
+        'Authorization': `Bearer ${token}`,
+      };
+    }
+    return {};
+  }
+
   private async fetchAPI(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
     console.log('[Membrane] Fetching:', url);
@@ -52,6 +82,7 @@ class APIService {
         ...options,
         headers: {
           'Content-Type': 'application/json',
+          ...this.getAuthHeaders(),
           ...options.headers,
         },
         credentials: 'omit', // Don't send credentials for Codespaces cross-origin requests
@@ -67,6 +98,100 @@ class APIService {
       console.error('[Membrane] Fetch failed:', error);
       throw error;
     }
+  }
+
+  // Authentication methods
+  async signup(email: string, password: string, name?: string): Promise<AuthResponse> {
+    const response = await this.fetchAPI('/api/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name }),
+    });
+
+    const data: AuthResponse = await response.json();
+    localStorage.setItem('auth_token', data.access_token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    return data;
+  }
+
+  async login(email: string, password: string): Promise<AuthResponse> {
+    const response = await this.fetchAPI('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data: AuthResponse = await response.json();
+    localStorage.setItem('auth_token', data.access_token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    return data;
+  }
+
+  async getCurrentUser(): Promise<User> {
+    const response = await this.fetchAPI('/api/auth/me');
+    const user: User = await response.json();
+    localStorage.setItem('user', JSON.stringify(user));
+    return user;
+  }
+
+  logout(): void {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+  }
+
+  getStoredUser(): User | null {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  }
+
+  isAuthenticated(): boolean {
+    return !!localStorage.getItem('auth_token');
+  }
+
+  // Project methods
+  async listProjects(): Promise<Project[]> {
+    const response = await this.fetchAPI('/api/projects');
+    const data = await response.json();
+    return data.projects;
+  }
+
+  async createProject(name: string, description?: string): Promise<Project> {
+    const response = await this.fetchAPI('/api/projects', {
+      method: 'POST',
+      body: JSON.stringify({ name, description }),
+    });
+    return response.json();
+  }
+
+  async getProject(projectId: number): Promise<Project> {
+    const response = await this.fetchAPI(`/api/projects/${projectId}`);
+    return response.json();
+  }
+
+  async updateProject(projectId: number, name?: string, description?: string): Promise<Project> {
+    const response = await this.fetchAPI(`/api/projects/${projectId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name, description }),
+    });
+    return response.json();
+  }
+
+  async deleteProject(projectId: number): Promise<void> {
+    await this.fetchAPI(`/api/projects/${projectId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Document methods
+  async getDocument(projectId: number): Promise<{ content: string; updated_at: string }> {
+    const response = await this.fetchAPI(`/api/projects/${projectId}/document`);
+    return response.json();
+  }
+
+  async updateDocument(projectId: number, content: string): Promise<{ content: string; updated_at: string }> {
+    const response = await this.fetchAPI(`/api/projects/${projectId}/document`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    });
+    return response.json();
   }
 
   async getModels(): Promise<Model[]> {
@@ -88,12 +213,13 @@ class APIService {
     purpose: string;
     partner: string;
     model: string;
-    projectId: string;
+    projectId: number;
   }): AsyncGenerator<string> {
-    const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
+    const response = await fetch(`${API_BASE_URL}/api/projects/${params.projectId}/chat/stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...this.getAuthHeaders(),
       },
       body: JSON.stringify({
         message: params.message,
@@ -102,7 +228,6 @@ class APIService {
         purpose: params.purpose,
         partner: params.partner,
         model: params.model,
-        project_id: params.projectId,
       }),
     });
 
@@ -148,8 +273,9 @@ class APIService {
     cursorPosition: number;
     purpose: string;
     model: string;
+    projectId: number;
   }): Promise<string> {
-    const response = await this.fetchAPI('/api/ghost-suggest', {
+    const response = await this.fetchAPI(`/api/projects/${params.projectId}/ghost-suggest`, {
       method: 'POST',
       body: JSON.stringify({
         text: params.text,
@@ -163,21 +289,19 @@ class APIService {
     return data.suggestion;
   }
 
-  async addMemory(projectId: string, content: string): Promise<void> {
-    await this.fetchAPI('/api/memory/add', {
+  async addMemory(projectId: number, content: string): Promise<void> {
+    await this.fetchAPI(`/api/projects/${projectId}/memory/add`, {
       method: 'POST',
       body: JSON.stringify({
-        project_id: projectId,
         content: content,
       }),
     });
   }
 
-  async searchMemory(projectId: string, query: string, topK: number = 5): Promise<string[]> {
-    const response = await this.fetchAPI('/api/memory/search', {
+  async searchMemory(projectId: number, query: string, topK: number = 5): Promise<string[]> {
+    const response = await this.fetchAPI(`/api/projects/${projectId}/memory/search`, {
       method: 'POST',
       body: JSON.stringify({
-        project_id: projectId,
         query: query,
         top_k: topK,
       }),
@@ -187,12 +311,13 @@ class APIService {
     return data.results;
   }
 
-  async uploadFile(projectId: string, file: File): Promise<any> {
+  async uploadFile(projectId: number, file: File): Promise<any> {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_BASE_URL}/api/upload/file?project_id=${projectId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/upload/file`, {
       method: 'POST',
+      headers: this.getAuthHeaders(),
       body: formData,
     });
 
@@ -203,14 +328,14 @@ class APIService {
     return response.json();
   }
 
-  async listFiles(projectId: string): Promise<any[]> {
-    const response = await this.fetchAPI(`/api/upload/list/${projectId}`);
+  async listFiles(projectId: number): Promise<any[]> {
+    const response = await this.fetchAPI(`/api/projects/${projectId}/upload/list`);
     const data = await response.json();
     return data.files;
   }
 
-  async deleteFile(projectId: string, filename: string): Promise<void> {
-    await this.fetchAPI(`/api/upload/file/${projectId}/${filename}`, {
+  async deleteFile(projectId: number, fileId: number): Promise<void> {
+    await this.fetchAPI(`/api/projects/${projectId}/upload/file/${fileId}`, {
       method: 'DELETE',
     });
   }

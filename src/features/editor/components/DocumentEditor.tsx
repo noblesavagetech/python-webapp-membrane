@@ -9,6 +9,7 @@ interface DocumentEditorProps {
   purpose: string;
   partner: string;
   selectedModel: string;
+  projectId: number | null;
 }
 
 interface GhostSuggestion {
@@ -16,7 +17,7 @@ interface GhostSuggestion {
   position: number;
 }
 
-function DocumentEditor({ content, onChange, onSelection, purpose, selectedModel, partner: _partner }: DocumentEditorProps) {
+function DocumentEditor({ content, onChange, onSelection, purpose, selectedModel, projectId, partner: _partner }: DocumentEditorProps) {
   const [localContent, setLocalContent] = useState(content);
   const [ghostSuggestion, setGhostSuggestion] = useState<GhostSuggestion | null>(null);
   const [isComposing, setIsComposing] = useState(false);
@@ -40,12 +41,17 @@ function DocumentEditor({ content, onChange, onSelection, purpose, selectedModel
       return null; // Don't suggest mid-word
     }
     
+    if (!projectId) {
+      return null; // No project selected
+    }
+    
     try {
       const suggestion = await apiService.getGhostSuggestion({
         text: contextText,
         cursorPosition: contextText.length,
         purpose,
         model: selectedModel,
+        projectId,
       });
       
       if (suggestion && suggestion.trim()) {
