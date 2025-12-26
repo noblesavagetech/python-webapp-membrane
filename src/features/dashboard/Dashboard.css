@@ -1,0 +1,381 @@
+
+.dashboard {
+  min-height: 100vh;
+  background: var(--color-bg-primary);
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 3rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-logo {
+  font-size: 1.75rem;
+  color: var(--color-accent-primary);
+}
+
+.header-left h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.user-name {
+  color: var(--color-text-secondary);
+}
+
+.logout-btn {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  transition: all var(--transition-fast);
+}
+
+.logout-btn:hover {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.dashboard-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem;
+}
+
+.dashboard-focus {
+  margin-bottom: 3rem;
+}
+
+.dashboard-focus h2,
+.projects-header h2 {
+  font-size: 1.25rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.focus-card {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, var(--color-bg-secondary), var(--color-bg-tertiary));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: inherit;
+  transition: all var(--transition-normal);
+}
+
+.focus-card:hover {
+  border-color: var(--color-accent-primary);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+.focus-icon {
+  font-size: 2.5rem;
+}
+
+.focus-info {
+  flex: 1;
+}
+
+.focus-info h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.focus-info p {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.focus-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.focus-arrow {
+  font-size: 1.5rem;
+  color: var(--color-accent-primary);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.focus-card:hover .focus-arrow {
+  opacity: 1;
+}
+
+.focus-empty {
+  padding: 2rem;
+  background: var(--color-bg-secondary);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.projects-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.new-project-btn {
+  padding: 0.75rem 1.25rem;
+  background: var(--color-accent-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: white;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.new-project-btn:hover {
+  background: var(--color-accent-secondary);
+}
+
+.new-project-form {
+  padding: 1.5rem;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-accent-primary);
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.5rem;
+}
+
+.new-project-form input {
+  width: 100%;
+  padding: 1rem;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.new-project-form input:focus {
+  outline: none;
+  border-color: var(--color-accent-primary);
+}
+
+.type-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.type-btn {
+  padding: 0.5rem 1rem;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  transition: all var(--transition-fast);
+}
+
+.type-btn:hover {
+  border-color: var(--color-border-focus);
+}
+
+.type-btn.active {
+  border-color: var(--color-accent-primary);
+  color: var(--color-accent-primary);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.cancel-btn {
+  padding: 0.75rem 1.25rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.cancel-btn:hover {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.create-btn {
+  padding: 0.75rem 1.5rem;
+  background: var(--color-accent-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: white;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.create-btn:hover {
+  background: var(--color-accent-secondary);
+}
+
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.project-card {
+  position: relative;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.project-card:hover {
+  border-color: var(--color-border-focus);
+}
+
+.project-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.project-icon {
+  font-size: 1.75rem;
+}
+
+.project-info {
+  flex: 1;
+}
+
+.project-info h3 {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.project-info p {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.project-meta {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.project-delete {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 1.25rem;
+  opacity: 0;
+  transition: all var(--transition-fast);
+}
+
+.project-card:hover .project-delete {
+  opacity: 1;
+}
+
+.project-delete:hover {
+  background: var(--color-error);
+  color: white;
+}
+
+.projects-empty {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: var(--color-bg-secondary);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.empty-icon {
+  font-size: 4rem;
+  color: var(--color-accent-primary);
+  margin-bottom: 1.5rem;
+}
+
+.projects-empty h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.projects-empty p {
+  color: var(--color-text-secondary);
+  max-width: 400px;
+  margin: 0 auto 1.5rem;
+}
+
+.empty-cta {
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+  border: none;
+  border-radius: var(--radius-md);
+  color: white;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.empty-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding: 1rem 1.5rem;
+  }
+  
+  .dashboard-main {
+    padding: 1.5rem;
+  }
+  
+  .focus-card {
+    flex-wrap: wrap;
+  }
+  
+  .focus-stats {
+    width: 100%;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+}
