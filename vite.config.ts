@@ -8,6 +8,9 @@ export default defineConfig({
     port: 3000,
     open: true,
   },
+  preview: {
+    allowedHosts: ['.railway.app', '.up.railway.app'],
+  },
   build: {
     outDir: 'dist',
     sourcemap: true,
