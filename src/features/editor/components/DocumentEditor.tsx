@@ -28,11 +28,22 @@ function DocumentEditor({ content, onChange, onSelection, purpose, selectedModel
   }, [content]);
 
   const generateGhostSuggestion = useCallback(async (text: string, cursorPosition: number) => {
-    // Call real API for ghost suggestions
+    // Smart context windowing: use last ~2000 words before cursor
+    const textBeforeCursor = text.substring(0, cursorPosition);
+    const words = textBeforeCursor.split(/\s+/);
+    const contextWords = words.slice(-2000); // Last 2000 words
+    const contextText = contextWords.join(' ');
+    
+    // Only show suggestions if cursor is at end of a word/sentence
+    const lastChar = textBeforeCursor[textBeforeCursor.length - 1];
+    if (lastChar && !/[\s.,;!?]/.test(lastChar)) {
+      return null; // Don't suggest mid-word
+    }
+    
     try {
       const suggestion = await apiService.getGhostSuggestion({
-        text,
-        cursorPosition,
+        text: contextText,
+        cursorPosition: contextText.length,
         purpose,
         model: selectedModel,
       });
@@ -64,29 +75,39 @@ function DocumentEditor({ content, onChange, onSelection, purpose, selectedModel
     // Generate new ghost suggestion after debounce
     if (!isComposing) {
       ghostTimeoutRef.current = window.setTimeout(async () => {
-        const cursorPos = e.target.selectionStart;
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+        
+        const cursorPos = textarea.selectionStart;
         const suggestion = await generateGhostSuggestion(newContent, cursorPos);
-        if (suggestion && cursorPos === newContent.length) {
+        
+        // Show suggestion if cursor hasn't moved
+        if (suggestion && textarea.selectionStart === cursorPos) {
           setGhostSuggestion(suggestion);
         }
-      }, 1500); // Increased debounce for API call
+      }, 1000); // 1 second debounce
     }
   }, [onChange, generateGhostSuggestion, isComposing]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Accept ghost suggestion with Tab
-    if (e.key === 'Tab' && ghostSuggestion) {
+    if (e.key === 'Tab' && ghostSuggestion && textareaRef.current) {
       e.preventDefault();
-      const newContent = localContent + ghostSuggestion.text;
+      const cursorPos = textareaRef.current.selectionStart;
+      const before = localContent.substring(0, cursorPos);
+      const after = localContent.substring(cursorPos);
+      const newContent = before + ghostSuggestion.text + after;
+      const newCursorPos = cursorPos + ghostSuggestion.text.length;
+      
       setLocalContent(newContent);
       onChange(newContent);
       setGhostSuggestion(null);
       
-      // Move cursor to end
+      // Move cursor to after inserted text
       setTimeout(() => {
         if (textareaRef.current) {
-          textareaRef.current.selectionStart = newContent.length;
-          textareaRef.current.selectionEnd = newContent.length;
+          textareaRef.current.selectionStart = newCursorPos;
+          textareaRef.current.selectionEnd = newCursorPos;
         }
       }, 0);
     }

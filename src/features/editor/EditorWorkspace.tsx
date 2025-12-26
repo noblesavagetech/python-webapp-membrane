@@ -89,14 +89,30 @@ function EditorWorkspace() {
       const idx = projects.findIndex(p => p.id === projectId);
       if (idx >= 0) {
         projects[idx].updatedAt = updated.updatedAt;
-        projects[idx].wordCount = content.split(/\s+/).filter(Boolean).length;
+        const wordCount = content.split(/\s+/).filter(Boolean).length;
+        projects[idx].wordCount = wordCount;
         await persistence.setItem(`membrane_projects_${user.id}`, JSON.stringify(projects));
         setProject(projects[idx]);
+        
+        // Auto-store context for large documents (every 500 words)
+        if (wordCount > 500 && wordCount % 500 < 10) {
+          // Extract paragraphs/sections to store as context
+          const paragraphs = content.split(/\n\n+/).filter(p => p.trim().length > 50);
+          const recentParagraphs = paragraphs.slice(-5); // Last 5 paragraphs
+          
+          for (const para of recentParagraphs) {
+            try {
+              await addMemory(para);
+            } catch (err) {
+              console.error('Failed to auto-store context:', err);
+            }
+          }
+        }
       }
     }
     
     setDocument(updated);
-  }, [projectId, user]);
+  }, [projectId, user, addMemory]);
 
   const handleContentChange = useCallback((content: string) => {
     if (saveTimeoutRef.current) {

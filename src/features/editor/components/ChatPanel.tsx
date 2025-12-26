@@ -97,10 +97,16 @@ function ChatPanel({
         timestamp: new Date().toISOString(),
       }]);
       
+      // Smart context handling: if document is large, use last 2000 words + selected text
+      const words = documentContent.split(/\\s+/);
+      const contextContent = words.length > 2000 
+        ? words.slice(-2000).join(' ')  // Last 2000 words
+        : documentContent;
+      
       // Stream response from API
       for await (const chunk of apiService.streamChat({
         message: text,
-        documentContent,
+        documentContent: contextContent,
         selectedText,
         purpose,
         partner,
