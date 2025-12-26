@@ -118,6 +118,13 @@ class SearchMemoryRequest(BaseModel):
 @app.post("/api/auth/signup", response_model=AuthResponse)
 async def signup(request: SignupRequest, db: Session = Depends(get_db)):
     """Create a new user account"""
+    # Validate password length (bcrypt has 72 byte limit)
+    if len(request.password) > 72:
+        raise HTTPException(status_code=400, detail="Password too long (max 72 characters)")
+    
+    if len(request.password) < 6:
+        raise HTTPException(status_code=400, detail="Password too short (min 6 characters)")
+    
     # Check if user exists
     existing_user = db.query(User).filter(User.email == request.email).first()
     if existing_user:
