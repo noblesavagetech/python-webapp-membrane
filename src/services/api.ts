@@ -1,15 +1,26 @@
-// Detect GitHub Codespaces environment
+// Detect deployment environment and set API URL
 const getAPIBaseURL = () => {
+  // Check for explicit environment variable first (Railway, Vercel, etc.)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
   if (typeof window === 'undefined') return 'http://localhost:8000';
   
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
   
-  // GitHub Codespaces: hostname pattern is like "username-reponame-random.app.github.dev"
+  // GitHub Codespaces: hostname pattern is "username-repo-xxxx-3000.app.github.dev"
   if (hostname.includes('.app.github.dev') || hostname.includes('.githubpreview.dev')) {
-    // The port is in the subdomain: change 3000 to 8000
     const newHostname = hostname.replace(/-3000\./, '-8000.');
     return `${protocol}//${newHostname}`;
+  }
+  
+  // Railway: if deployed on Railway, backend should be on a different service
+  // User needs to set VITE_API_URL in Railway environment variables
+  if (hostname.includes('.railway.app') || hostname.includes('.up.railway.app')) {
+    console.error('Railway deployment detected. Please set VITE_API_URL environment variable to your backend URL');
+    return 'BACKEND_URL_NOT_SET'; // Will cause visible error
   }
   
   // Local development
