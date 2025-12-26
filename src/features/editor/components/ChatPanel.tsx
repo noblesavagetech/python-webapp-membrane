@@ -39,7 +39,6 @@ function ChatPanel({
   purpose,
   partner,
   documentContent,
-  memories,
   onApplySuggestion,
   onAddMemory,
 }: ChatPanelProps) {
