@@ -72,27 +72,6 @@ function EditorWorkspace() {
     loadProject();
   }, [user, projectId, navigate]);
 
-  const addMemory = useCallback(async (memory: string) => {
-    if (!projectId) return;
-    
-    const updated = [...memories, memory];
-    setMemories(updated);
-    await persistence.setItem(`membrane_memories_${projectId}`, JSON.stringify(updated));
-    
-    // Update memory count in project
-    if (user) {
-      const stored = await persistence.getItem(`membrane_projects_${user.id}`);
-      if (stored) {
-        const projects: Project[] = JSON.parse(stored);
-        const idx = projects.findIndex(p => p.id === projectId);
-        if (idx >= 0) {
-          projects[idx].memoryCount = updated.length;
-          await persistence.setItem(`membrane_projects_${user.id}`, JSON.stringify(projects));
-        }
-      }
-    }
-  }, [memories, projectId, user]);
-
   const saveDocument = useCallback(async (content: string) => {
     if (!projectId || !user) return;
     
@@ -110,30 +89,49 @@ function EditorWorkspace() {
       const idx = projects.findIndex(p => p.id === projectId);
       if (idx >= 0) {
         projects[idx].updatedAt = updated.updatedAt;
-        const wordCount = content.split(/\s+/).filter(Boolean).length;
-        projects[idx].wordCount = wordCount;
+        projects[idx].wordCount = content.split(/\s+/).filter(Boolean).length;
         await persistence.setItem(`membrane_projects_${user.id}`, JSON.stringify(projects));
         setProject(projects[idx]);
-        
-        // Auto-store context for large documents (every 500 words)
-        if (wordCount > 500 && wordCount % 500 < 10) {
-          // Extract paragraphs/sections to store as context
-          const paragraphs = content.split(/\n\n+/).filter(p => p.trim().length > 50);
-          const recentParagraphs = paragraphs.slice(-5); // Last 5 paragraphs
-          
-          for (const para of recentParagraphs) {
-            try {
-              await addMemory(para);
-            } catch (err) {
-              console.error('Failed to auto-store context:', err);
-            }
-          }
-        }
       }
     }
     
     setDocument(updated);
-  }, [projectId, user, addMemory]);
+  }, [projectId, user]);
+
+  const handleContentChange = useCallback((content: string) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    saveTimeoutRef.current = window.setTimeout(() => {
+      saveDocument(content);
+    }, 1000);
+  }, [saveDocument]);
+
+  const handleSelection = useCallback((text: string, range: { start: number; end: number } | null) => {
+    setSelectedText(text);
+    setSelectedRange(range);
+  }, []);
+
+  const handleInsertText = useCallback((text: string) => {
+    // This would be handled by the editor component
+    console.log('Insert text:', text);
+  }, []);
+
+  const handleApplySuggestion = useCallback((original: string, suggestion: string) => {
+    // This would trigger the non-destructive diff in the editor
+    console.log('Apply suggestion:', { original, suggestion });
+  }, []);
+
+  const addMemory = useCallback(async (memory: string) => {
+    if (!projectId) return;
+    
+    const updated = [...memories, memory];
+    setMemories(updated);
+    await persistence.setItem(`membrane_memories_${projectId}`, JSON.stringify(updated));
+    
+    // Update memory count in project
+    if (user) {
       const stored = await persistence.getItem(`membrane_projects_${user.id}`);
       if (stored) {
         const projects: Project[] = JSON.parse(stored);
