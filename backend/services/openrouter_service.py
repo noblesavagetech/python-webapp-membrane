@@ -103,16 +103,16 @@ class OpenRouterService:
             "messages": [
                 {
                     "role": "system",
-                    "content": f"You are an AI writing assistant for {purpose_desc}. Your job is to predict what the user will write next. Respond ONLY with the predicted continuation text (10-30 words). Match the user's writing style and tone exactly. Do NOT include explanations, apologies, or meta-commentary."
+                    "content": f"You are an autocomplete assistant for {purpose_desc}. Complete the text. Output ONLY the continuation, no explanations."
                 },
                 {
                     "role": "user",
-                    "content": f"Text written so far:\n\n{relevant_context}\n\n---\nPredict the next 10-30 words:"
+                    "content": relevant_context
                 }
             ],
             "stream": False,
             "temperature": 0.7,
-            "max_tokens": 60
+            "max_tokens": 50
         }
         
         async with httpx.AsyncClient(timeout=30.0) as client:
