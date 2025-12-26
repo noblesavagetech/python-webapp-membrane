@@ -1,11 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { apiService, User as APIUser } from '../services/api';
-
-interface User {
-  id: number;
-  email: string;
-  name?: string;
-}
+import { apiService, User } from '../services/api';
 
 interface AuthContextType {
   user: User | null;

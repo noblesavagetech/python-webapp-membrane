@@ -311,11 +311,11 @@ class APIService {
     return data.results;
   }
 
-  async uploadFile(projectId: number, file: File): Promise<any> {
+  async uploadFile(projectId: number, file: File, train: boolean = true): Promise<any> {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/upload/file`, {
+    const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/upload/file?train=${train}`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: formData,

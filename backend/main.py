@@ -521,10 +521,11 @@ async def search_memory(
 async def upload_file(
     project_id: int,
     file: UploadFile = File(...),
+    train: bool = True,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Upload training data files (CSV, TXT, etc.)"""
+    """Upload files - either for training (adds to vector memory) or as context (reference only)"""
     # Verify project ownership
     project = db.query(Project).filter(
         Project.id == project_id,
@@ -538,10 +539,13 @@ async def upload_file(
     user_project_path = f"{current_user.id}/{project_id}"
     file_path = await file_service.save_upload(user_project_path, file)
     
-    # Process and add to vector store
+    # Extract text content
     content = await file_service.extract_text(file_path)
-    collection_name = f"user_{current_user.id}_project_{project_id}"
-    await vector_service.add_memory(collection_name, content, metadata={"source": file.filename})
+    
+    # Only add to vector store if training
+    if train:
+        collection_name = f"user_{current_user.id}_project_{project_id}"
+        await vector_service.add_memory(collection_name, content, metadata={"source": file.filename})
     
     # Save file record to database
     file_record = FileUpload(
@@ -550,7 +554,7 @@ async def upload_file(
         filepath=file_path,
         file_size=os.path.getsize(file_path),
         mime_type=file.content_type,
-        processed=True
+        processed=train  # Mark as processed only if trained
     )
     db.add(file_record)
     db.commit()
@@ -559,7 +563,9 @@ async def upload_file(
         "status": "success",
         "filename": file.filename,
         "path": file_path,
-        "size": os.path.getsize(file_path)
+        "size": os.path.getsize(file_path),
+        "trained": train,
+        "content": content  # Return content for context files
     }
 
 @app.get("/api/projects/{project_id}/upload/list")

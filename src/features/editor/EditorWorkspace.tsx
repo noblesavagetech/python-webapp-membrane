@@ -229,6 +229,7 @@ function EditorWorkspace() {
           <div className="context-panel">
             <ContextPanel
               memories={memories}
+              projectId={projectIdNum}
               onRemoveMemory={async (idx) => {
                 const updated = memories.filter((_, i) => i !== idx);
                 setMemories(updated);

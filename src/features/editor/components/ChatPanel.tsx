@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
 import { apiService, Model, API_BASE_URL } from '../../../services/api';
 import './ChatPanel.css';
 

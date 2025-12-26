@@ -6,24 +6,33 @@
 }
 
 .context-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   padding: 1rem;
   border-bottom: 1px solid var(--color-border);
 }
 
-.context-header h3 {
-  font-size: 0.95rem;
-  font-weight: 600;
+.context-tabs {
+  display: flex;
+  gap: 0.5rem;
 }
 
-.memory-count {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  background: var(--color-bg-primary);
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-sm);
+.context-tabs .tab {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  transition: all 0.2s;
+}
+
+.context-tabs .tab:hover {
+  color: var(--color-text-primary);
+}
+
+.context-tabs .tab.active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
 }
 
 .context-description {
@@ -106,6 +115,100 @@
 }
 
 .memory-remove:hover {
+  background: var(--color-error);
+  color: white;
+}
+
+.file-upload-zone {
+  padding: 2rem 1rem;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+  margin: 1rem;
+}
+
+.upload-btn {
+  padding: 0.75rem 1.5rem;
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.upload-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.files-list {
+  padding: 0 1rem 1rem 1rem;
+}
+
+.files-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-fast);
+}
+
+.file-item:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-accent);
+}
+
+.file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name {
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-meta {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  display: flex;
+  gap: 0.5rem;
+}
+
+.file-delete {
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.file-delete:hover {
   background: var(--color-error);
   color: white;
 }
